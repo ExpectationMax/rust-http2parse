@@ -1,5 +1,5 @@
 bitflags! {
-    #[derive(Copy, Clone)]
+    #[derive(Copy, Clone, Eq, PartialEq, Hash, Debug)]
     pub struct Flag: u8 {
         const END_STREAM = 0x1;
         const ACK = 0x1;
