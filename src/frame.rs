@@ -1,4 +1,4 @@
-use {Payload, Error, Flag, Kind, StreamIdentifier, FRAME_HEADER_BYTES};
+use {Error, Flag, Kind, Payload, StreamIdentifier, FRAME_HEADER_BYTES};
 
 #[cfg(feature = "random")]
 use rand::{Rand, Rng};
@@ -6,14 +6,14 @@ use rand::{Rand, Rng};
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
 pub struct Frame<'a> {
     pub header: FrameHeader,
-    pub payload: Payload<'a>
+    pub payload: Payload<'a>,
 }
 
 impl<'a> Frame<'a> {
     pub fn parse(header: FrameHeader, buf: &[u8]) -> Result<Frame, Error> {
         Ok(Frame {
-            header: header,
-            payload: try!(Payload::parse(header, buf))
+            header,
+            payload: Payload::parse(header, buf)?,
         })
     }
 
@@ -47,8 +47,8 @@ impl FrameHeader {
         Ok(FrameHeader {
             length: ((buf[0] as u32) << 16) | ((buf[1] as u32) << 8) | buf[2] as u32,
             kind: Kind::new(buf[3]),
-            flag: try!(Flag::new(buf[4]).map_err(|()| { Error::BadFlag(buf[4]) })),
-            id: StreamIdentifier::parse(&buf[5..])
+            flag: Flag::new(buf[4]).map_err(|()| Error::BadFlag(buf[4]))?,
+            id: StreamIdentifier::parse(&buf[5..]),
         })
     }
 
@@ -94,9 +94,10 @@ impl Rand for FrameHeader {
         FrameHeader {
             length: rng.gen_range(0, 1 << 24),
             kind: Kind::new(rng.gen_range(0, 9)),
-            flag: *rng.choose(&[Flag::padded() | Flag::priority()])
-                    .unwrap_or(&Flag::empty()),
-            id: StreamIdentifier(rng.gen_range(0, 1 << 31))
+            flag: *rng
+                .choose(&[Flag::padded() | Flag::priority()])
+                .unwrap_or(&Flag::empty()),
+            id: StreamIdentifier(rng.gen_range(0, 1 << 31)),
         }
     }
 }
@@ -109,60 +110,72 @@ impl Rand for Frame<'static> {
 
         Frame {
             header: header,
-            payload: payload
+            payload: payload,
         }
     }
 }
 
 #[cfg(test)]
 mod test {
-    use {Kind, Flag, FrameHeader, StreamIdentifier};
     #[cfg(feature = "random")]
-    use {Frame};
+    use Frame;
+    use {Flag, FrameHeader, Kind, StreamIdentifier};
 
     #[test]
     fn test_frame_header_parse_empty() {
-        assert_eq!(FrameHeader {
-            length: 0,
-            kind: Kind::Data,
-            flag: Flag::empty(),
-            id: StreamIdentifier(0)
-        }, FrameHeader::parse(&[
-            0u8, 0u8, 0u8, // length
-            0u8, // type/kind
-            0u8, // flags
-            0u8, 0u8, 0u8, 0u8 // reserved bit + stream identifier
-        ]).unwrap());
+        assert_eq!(
+            FrameHeader {
+                length: 0,
+                kind: Kind::Data,
+                flag: Flag::empty(),
+                id: StreamIdentifier(0)
+            },
+            FrameHeader::parse(&[
+                0u8, 0u8, 0u8, // length
+                0u8, // type/kind
+                0u8, // flags
+                0u8, 0u8, 0u8, 0u8 // reserved bit + stream identifier
+            ])
+            .unwrap()
+        );
     }
 
     #[test]
     fn test_frame_header_parse_full() {
-        assert_eq!(FrameHeader {
-            length: 16777215,
-            kind: Kind::Unregistered,
-            flag: Flag::empty(),
-            id: StreamIdentifier(2147483647)
-        }, FrameHeader::parse(&[
-            0xFF, 0xFF, 0xFF, // length
-            0xFF, // type/kind
-            0x0, // flags
-            0xFF, 0xFF, 0xFF, 0xFF // reserved bit + stream identifier
-        ]).unwrap());
+        assert_eq!(
+            FrameHeader {
+                length: 16777215,
+                kind: Kind::Unregistered,
+                flag: Flag::empty(),
+                id: StreamIdentifier(2147483647)
+            },
+            FrameHeader::parse(&[
+                0xFF, 0xFF, 0xFF, // length
+                0xFF, // type/kind
+                0x0,  // flags
+                0xFF, 0xFF, 0xFF, 0xFF // reserved bit + stream identifier
+            ])
+            .unwrap()
+        );
     }
 
     #[test]
     fn test_frame_header_parse() {
-        assert_eq!(FrameHeader {
-            length: 66051,
-            kind: Kind::Settings,
-            flag: Flag::end_stream(),
-            id: StreamIdentifier(101124105)
-        }, FrameHeader::parse(&[
-            0x1, 0x2, 0x3, // length
-            0x4, // type/kind
-            0x1, // flags
-            0x6, 0x7, 0x8, 0x9 // reserved bit + stream identifier
-        ]).unwrap());
+        assert_eq!(
+            FrameHeader {
+                length: 66051,
+                kind: Kind::Settings,
+                flag: Flag::end_stream(),
+                id: StreamIdentifier(101124105)
+            },
+            FrameHeader::parse(&[
+                0x1, 0x2, 0x3, // length
+                0x4, // type/kind
+                0x1, // flags
+                0x6, 0x7, 0x8, 0x9 // reserved bit + stream identifier
+            ])
+            .unwrap()
+        );
     }
 
     #[cfg(feature = "random")]
@@ -188,8 +201,8 @@ mod test {
 
             assert_eq!(
                 frame,
-                Frame::parse(FrameHeader::parse(&buf[..9]).unwrap(),
-                             &buf[9..]).unwrap())
+                Frame::parse(FrameHeader::parse(&buf[..9]).unwrap(), &buf[9..]).unwrap()
+            )
         }
 
         let mut buf = vec![0; 5000];
@@ -207,19 +220,23 @@ mod test {
     fn bench_frame_parse(b: &mut ::test::Bencher) {
         // Each iter = 5 frames
         let frames = vec![::rand::random::<Frame>(); 5];
-        let bufs = frames.iter().map(|frame| {
-            let mut buf = vec![0; 2000];
-            frame.encode(&mut buf);
-            buf
-        }).collect::<Vec<_>>();
+        let bufs = frames
+            .iter()
+            .map(|frame| {
+                let mut buf = vec![0; 2000];
+                frame.encode(&mut buf);
+                buf
+            })
+            .collect::<Vec<_>>();
 
-        b.bytes = frames.iter().map(|frame| frame.encoded_len() as u64)
+        b.bytes = frames
+            .iter()
+            .map(|frame| frame.encoded_len() as u64)
             .fold(0, |a, b| a + b);
 
         b.iter(|| {
             for buf in &bufs {
-                Frame::parse(FrameHeader::parse(&buf[..9]).unwrap(),
-                             &buf[9..]).unwrap();
+                Frame::parse(FrameHeader::parse(&buf[..9]).unwrap(), &buf[9..]).unwrap();
             }
         });
     }
@@ -229,7 +246,9 @@ mod test {
     fn bench_frame_encode(b: &mut ::test::Bencher) {
         let frames = vec![::rand::random::<Frame>(); 5];
 
-        b.bytes = frames.iter().map(|frame| frame.encoded_len() as u64)
+        b.bytes = frames
+            .iter()
+            .map(|frame| frame.encoded_len() as u64)
             .fold(0, |a, b| a + b);
 
         let mut buf = vec![0; 2000];
@@ -250,7 +269,7 @@ mod test {
                 0x1, 0x2, 0x3, // length
                 0x4, // type/kind
                 0x1, // flags
-                0x6, 0x7, 0x8, 0x9 // reserved bit + stream identifier
+                0x6, 0x7, 0x8, 0x9, // reserved bit + stream identifier
             ];
 
             // Prevent constant propagation.
@@ -261,4 +280,3 @@ mod test {
         });
     }
 }
-

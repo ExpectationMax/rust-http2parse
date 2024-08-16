@@ -11,7 +11,7 @@ pub enum Kind {
     GoAway = 7,
     WindowUpdate = 8,
     Continuation = 9,
-    Unregistered
+    Unregistered,
 }
 
 impl Kind {
@@ -27,8 +27,8 @@ impl Kind {
             7 => Kind::GoAway,
             8 => Kind::WindowUpdate,
             9 => Kind::Continuation,
-            _ => Kind::Unregistered
-        }
+            _ => Kind::Unregistered,
+        };
     }
 
     pub fn encode(&self) -> u8 {
@@ -43,7 +43,7 @@ impl Kind {
             Kind::GoAway => 7,
             Kind::WindowUpdate => 8,
             Kind::Continuation => 9,
-            Kind::Unregistered => 255
+            Kind::Unregistered => 255,
         }
     }
 }
@@ -54,4 +54,3 @@ fn test_encode() {
         assert_eq!(Kind::new(n), Kind::new(Kind::new(n).encode()));
     }
 }
-

@@ -1,3 +1,4 @@
+#![no_std]
 #![cfg_attr(test, deny(warnings))]
 #![cfg_attr(test, feature(test))]
 #![allow(non_upper_case_globals)]
@@ -12,24 +13,24 @@
 extern crate bitflags;
 extern crate byteorder;
 
-#[cfg(test)]
-extern crate test;
 #[cfg(any(test, feature = "random"))]
 extern crate rand;
+#[cfg(test)]
+extern crate test;
 
 const FRAME_HEADER_BYTES: usize = 9;
 
-pub use kind::Kind;
 pub use flag::Flag;
 pub use frame::{Frame, FrameHeader};
+pub use kind::Kind;
 pub use payload::{Payload, Priority, Setting, SettingIdentifier};
 
 use byteorder::ByteOrder;
 
-mod kind;
 mod flag;
-mod payload;
 mod frame;
+mod kind;
+mod payload;
 
 /// Errors that can occur during parsing an HTTP/2 frame.
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
@@ -62,13 +63,13 @@ pub enum Error {
 
     /// The payload length specified by the frame header was not the
     /// value necessary for the specific frame type.
-    InvalidPayloadLength
+    InvalidPayloadLength,
 }
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
 struct ParserSettings {
     padding: bool,
-    priority: bool
+    priority: bool,
 }
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
@@ -76,9 +77,7 @@ pub struct StreamIdentifier(pub u32);
 
 impl StreamIdentifier {
     pub fn parse(buf: &[u8]) -> StreamIdentifier {
-        StreamIdentifier(
-            byteorder::BigEndian::read_u32(buf) & ((1 << 31) - 1)
-        )
+        StreamIdentifier(byteorder::BigEndian::read_u32(buf) & ((1 << 31) - 1))
     }
 
     pub fn encode(&self, buf: &mut [u8]) -> usize {
@@ -147,6 +146,6 @@ fn test_stream_id_ignores_highest_bit() {
 
     assert_eq!(
         StreamIdentifier::parse(&raw1),
-        StreamIdentifier::parse(&raw2));
+        StreamIdentifier::parse(&raw2)
+    );
 }
-
