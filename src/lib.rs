@@ -18,7 +18,7 @@ extern crate rand;
 #[cfg(test)]
 extern crate test;
 
-const FRAME_HEADER_BYTES: usize = 9;
+pub const FRAME_HEADER_BYTES: usize = 9;
 
 pub use flag::Flag;
 pub use frame::{Frame, FrameHeader};
