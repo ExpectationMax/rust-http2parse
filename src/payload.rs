@@ -354,6 +354,7 @@ impl Setting {
             0x3 => Some(SettingIdentifier::MaxConcurrentStreams),
             0x4 => Some(SettingIdentifier::InitialWindowSize),
             0x5 => Some(SettingIdentifier::MaxFrameSize),
+            0x6 => Some(SettingIdentifier::MaxHeaderListSize),
             _ => None,
         }
     }
@@ -392,6 +393,7 @@ pub enum SettingIdentifier {
     MaxConcurrentStreams = 0x3,
     InitialWindowSize = 0x4,
     MaxFrameSize = 0x5,
+    MaxHeaderListSize = 0x6,
 }
 
 #[cfg(feature = "random")]
