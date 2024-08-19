@@ -488,12 +488,9 @@ fn trim_padding(settings: ParserSettings, header: FrameHeader, buf: &[u8]) -> Re
 }
 
 fn simple_write(src: &[u8], dst: &mut [u8]) -> usize {
-    let mut bytes_written = 0;
-    for (place, data) in dst.iter_mut().zip(src.iter()) {
-        *place = *data;
-        bytes_written += 1;
-    }
-    return bytes_written;
+    let length = min(src.len(), dst.len());
+    dst[..length].copy_from_slice(&src[..length]);
+    return length;
 }
 
 #[inline]
