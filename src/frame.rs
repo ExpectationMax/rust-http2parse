@@ -3,7 +3,7 @@ use {Error, Flag, Kind, Payload, StreamIdentifier, FRAME_HEADER_BYTES};
 #[cfg(feature = "random")]
 use rand::{Rand, Rng};
 
-#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
+#[derive(Debug, PartialEq, Eq)]
 pub struct Frame<'a> {
     pub header: FrameHeader,
     pub payload: Payload<'a>,

@@ -1,12 +1,15 @@
-use core::{fmt, mem, slice};
+use core::{fmt, mem};
+use core::cmp::min;
 use {Error, ErrorCode, Flag, FrameHeader, Kind, ParserSettings, SizeIncrement, StreamIdentifier};
-
+use zerocopy_derive::{FromBytes, AsBytes, FromZeroes, Unaligned};
+use zerocopy::{AsBytes, Ref};
+use zerocopy::byteorder::network_endian::{U16, U32};
 use byteorder::ByteOrder;
 
 #[cfg(feature = "random")]
 use rand::{Rand, Rng};
 
-#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
+#[derive(Debug, PartialEq, Eq)]
 pub enum Payload<'a> {
     Data {
         data: &'a [u8],
@@ -114,7 +117,7 @@ impl<'a> Payload<'a> {
                 priority_wrote + block_wrote
             }
             Payload::Reset(ref err) => err.encode(buf),
-            Payload::Settings(ref settings) => encode_memory(Setting::to_bytes(settings), buf),
+            Payload::Settings(ref settings) => encode_memory((*settings).as_bytes(), buf),
             Payload::Ping(data) => ::encode_u64(buf, data),
             Payload::GoAway {
                 ref data,
@@ -219,13 +222,14 @@ impl<'a> Payload<'a> {
 
     #[inline]
     fn parse_settings(header: FrameHeader, buf: &'a [u8]) -> Result<Payload<'a>, Error> {
+
         if header.length % mem::size_of::<Setting>() as u32 != 0 {
             return Err(Error::PartialSettingLength);
         }
 
-        Ok(Payload::Settings(Setting::from_bytes(
-            &buf[..header.length as usize],
-        )))
+        let n_settings = (header.length / mem::size_of::<Setting>() as u32) as usize;
+        let (settings, _) = Ref::new_slice_from_prefix(buf, n_settings).ok_or_else(|| Error::InvalidPayloadLength)?;
+        Ok(Payload::Settings(settings.into_slice()))
     }
 
     #[inline]
@@ -323,11 +327,11 @@ impl Priority {
 }
 
 // Settings are (u16, u32) in memory.
-#[repr(packed)]
-#[derive(Copy, Clone, PartialEq, Eq, Hash)]
+#[repr(C)]
+#[derive(Copy, Clone, PartialEq, Eq, Hash, FromBytes, FromZeroes, AsBytes, Unaligned)]
 pub struct Setting {
-    identifier: u16,
-    value: u32,
+    identifier: U16,
+    value: U32,
 }
 
 impl fmt::Debug for Setting {
@@ -339,16 +343,16 @@ impl fmt::Debug for Setting {
 
 impl Setting {
     #[inline]
-    pub fn new(identifier: SettingIdentifier, value: u32) -> Setting {
+    pub fn new(identifier: u16, value: u32) -> Setting {
         Setting {
-            identifier: identifier as u16,
-            value: value,
+            identifier: identifier.into(),
+            value: value.into(),
         }
     }
 
     #[inline]
     pub fn identifier(&self) -> Option<SettingIdentifier> {
-        match self.identifier {
+        match self.identifier.get() {
             0x1 => Some(SettingIdentifier::HeaderTableSize),
             0x2 => Some(SettingIdentifier::EnablePush),
             0x3 => Some(SettingIdentifier::MaxConcurrentStreams),
@@ -361,32 +365,12 @@ impl Setting {
 
     #[inline]
     pub fn value(&self) -> u32 {
-        self.value
-    }
-
-    #[inline]
-    fn to_bytes(settings: &[Setting]) -> &[u8] {
-        unsafe {
-            slice::from_raw_parts(
-                settings.as_ptr() as *const u8,
-                settings.len() * mem::size_of::<Setting>(),
-            )
-        }
-    }
-
-    #[inline]
-    fn from_bytes(bytes: &[u8]) -> &[Setting] {
-        unsafe {
-            slice::from_raw_parts(
-                bytes.as_ptr() as *const Setting,
-                bytes.len() / mem::size_of::<Setting>(),
-            )
-        }
+        self.value.get()
     }
 }
 
-#[repr(u16)]
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
+#[repr(u16)]
 pub enum SettingIdentifier {
     HeaderTableSize = 0x1,
     EnablePush = 0x2,
