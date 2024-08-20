@@ -1,5 +1,6 @@
 #[repr(u8)]
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
 pub enum Kind {
     Data = 0,
     Headers = 1,

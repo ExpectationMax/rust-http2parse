@@ -17,6 +17,7 @@ bitflags = "2.6.0"
 byteorder = { version = "1", default-features = false }
 zerocopy = { version = "0.7.35", features = ["byteorder"] }
 zerocopy-derive = "0.7.35"
+defmt = { version = "0.3", optional = true }
 
 [dependencies.rand]
 version = "0.3"

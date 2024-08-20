@@ -36,6 +36,7 @@ mod payload;
 
 /// Errors that can occur during parsing an HTTP/2 frame.
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
 pub enum Error {
     /// A full frame header was not passed.
     Short,

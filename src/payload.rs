@@ -337,9 +337,18 @@ pub struct Setting {
 impl fmt::Debug for Setting {
     #[inline]
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        fmt::Debug::fmt(&self.identifier(), f)
+        fmt::Debug::fmt(&self.identifier().expect("Setting does not have a valid identifier."), f)
     }
 }
+
+#[cfg(feature = "defmt")]
+impl defmt::Format for Setting {
+    fn format(&self, fmt: defmt::Formatter) {
+        // Format as hexadecimal.
+        defmt::write!(fmt, "Setting {{ {:?}, {} }}", self.identifier(), self.value());
+    }
+}
+
 
 impl Setting {
     #[inline]
@@ -371,6 +380,7 @@ impl Setting {
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
 #[repr(u16)]
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
 pub enum SettingIdentifier {
     HeaderTableSize = 0x1,
     EnablePush = 0x2,
