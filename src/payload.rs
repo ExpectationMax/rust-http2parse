@@ -352,9 +352,9 @@ impl defmt::Format for Setting {
 
 impl Setting {
     #[inline]
-    pub fn new(identifier: u16, value: u32) -> Setting {
+    pub fn new(identifier: SettingIdentifier, value: u32) -> Setting {
         Setting {
-            identifier: identifier.into(),
+            identifier: (identifier as u16).into(),
             value: value.into(),
         }
     }
