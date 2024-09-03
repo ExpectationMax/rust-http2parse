@@ -10,6 +10,7 @@ use byteorder::ByteOrder;
 use rand::{Rand, Rng};
 
 #[derive(Debug, PartialEq, Eq)]
+#[derive(defmt::Format)]
 pub enum Payload<'a> {
     Data {
         data: &'a [u8],
@@ -288,6 +289,7 @@ impl<'a> Payload<'a> {
 }
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
+#[derive(defmt::Format)]
 pub struct Priority {
     exclusive: bool,
     dependency: StreamIdentifier,

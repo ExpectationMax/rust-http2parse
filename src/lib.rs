@@ -88,7 +88,14 @@ impl StreamIdentifier {
     }
 }
 
+impl defmt::Format for StreamIdentifier {
+    fn format(&self, fmt: defmt::Formatter) {
+        defmt::write!(fmt, "StreamIdentifier {{ {} }}", self.0);
+    }
+}
+
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
+#[derive(defmt::Format)]
 pub struct ErrorCode(pub u32);
 
 pub enum HttpError {
@@ -109,6 +116,7 @@ impl ErrorCode {
 }
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
+#[derive(defmt::Format)]
 pub struct SizeIncrement(pub u32);
 
 impl SizeIncrement {

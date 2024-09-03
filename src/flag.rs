@@ -1,7 +1,6 @@
 bitflags! {
     #[derive(Copy, Clone, Eq, PartialEq, Hash, Debug)]
     pub struct Flag: u8 {
-        const NONE = 0x0;
         const END_STREAM = 0x1;
         const ACK = 0x1;
         const END_HEADERS = 0x4;
@@ -35,6 +34,15 @@ impl Flag {
     pub fn priority() -> Flag {
         Flag::PRIORITY
     }
+}
+
+impl defmt::Format for Flag {
+    fn format(&self, fmt: defmt::Formatter) {
+        defmt::write!(fmt,
+            "Flag {{ {=u8:b} }}", self.bits()
+        );
+    }
+
 }
 
 #[cfg(test)]

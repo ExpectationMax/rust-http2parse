@@ -4,6 +4,7 @@ use {Error, Flag, Kind, Payload, StreamIdentifier, FRAME_HEADER_BYTES};
 use rand::{Rand, Rng};
 
 #[derive(Debug, PartialEq, Eq)]
+#[derive(defmt::Format)]
 pub struct Frame<'a> {
     pub header: FrameHeader,
     pub payload: Payload<'a>,
@@ -30,6 +31,7 @@ impl<'a> Frame<'a> {
 }
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
+#[derive(defmt::Format)]
 pub struct FrameHeader {
     pub length: u32,
     pub kind: Kind,
